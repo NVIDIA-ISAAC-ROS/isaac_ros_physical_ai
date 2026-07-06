@@ -32,24 +32,58 @@ See the License for the specific language governing permissions and
 limitations under the License. -->
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>isaac_ros_unitree_g1_teleop_bringup</name>
+  <name>isaac_ros_unitree_g1_recorder</name>
   <version>4.5.0</version>
-  <description>High-level teleop launch file for Unitree G1: agile locomotion + bimanual IK + finger control with interactive marker or XR teleop input.</description>
+  <description>
+    Data recording package for the Unitree G1 humanoid robot.
+    Records synchronized teleoperation demonstrations to MCAP rosbags
+    suitable for conversion to LeRobot format for GR00T fine-tuning.
+  </description>
   <maintainer email="isaac-ros-maintainers@nvidia.com">Isaac ROS Maintainers</maintainer>
   <license>Apache-2.0</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
+  <buildtool_depend>ament_cmake_python</buildtool_depend>
 
-  <!-- Dependencies -->
-  <exec_depend>unitree_g1_bringup</exec_depend>
-  <exec_depend>isaac_ros_cumotion_controllers</exec_depend>
-  <exec_depend>isaac_ros_teleop</exec_depend>
+  <!-- Message definitions (schema embedded in the bag) -->
+  <depend>isaac_ros_data_flywheel</depend>
+  <depend>isaac_ros_deploy_interfaces</depend>
+  <depend>std_srvs</depend>
+
+  <!-- ROS runtime -->
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>sensor_msgs</exec_depend>
+  <exec_depend>geometry_msgs</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
+  <exec_depend>rcl_interfaces</exec_depend>
+
+  <!-- Nodes reused from other packages -->
+  <exec_depend>isaac_ros_h264_encoder</exec_depend>
+  <exec_depend>composition_interfaces</exec_depend>
+
+  <!-- Launch infrastructure -->
   <exec_depend>launch</exec_depend>
   <exec_depend>launch_ros</exec_depend>
-  <exec_depend>realsense2_camera</exec_depend>
 
   <test_depend>ament_cmake_pytest</test_depend>
+  <test_depend>ament_copyright</test_depend>
+  <test_depend>ament_flake8</test_depend>
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>ament_pep257</test_depend>
+  <test_depend>python3-pytest</test_depend>
+  <test_depend>python3-rosbags-pip-shim</test_depend>
+
+  <!-- test_recorder_with_mujoco.launch.py end-to-end integration -->
+  <test_depend>ament_cmake_ros</test_depend>
+  <test_depend>controller_manager_msgs</test_depend>
+  <test_depend>isaac_ros_deploy_ros2_control</test_depend>
+  <test_depend>isaac_ros_teleop</test_depend>
+  <test_depend>launch_testing</test_depend>
   <test_depend>launch_testing_ament_cmake</test_depend>
+  <test_depend>mujoco_ros2_control</test_depend>
+  <test_depend>mujoco_ros2_control_msgs</test_depend>
+  <test_depend>tf2_ros</test_depend>
+  <test_depend>unitree_g1_bringup</test_depend>
 
   <export>
     <build_type>ament_cmake</build_type>
