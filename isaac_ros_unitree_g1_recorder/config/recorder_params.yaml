@@ -1,0 +1,23 @@
+# SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+# Default parameters for unitree_g1_recorder_node.
+# These can be overridden via launch arguments or by passing a params file to the node.
+
+g1_recorder:
+  ros__parameters:
+    # Rate (Hz) at which RecordData sync messages are published.
+    # Determines the training data frame rate — 15 Hz is a good starting point
+    # and matches typical manipulation datasets.
+    sync_rate: 15.0
+
+    # H264 compressed camera topic (encoder loaded/unloaded per episode).
+    camera_topic: /camera/color/image_compressed
+
+    # Raw camera topic (input to the H264 encoder).
+    camera_raw_topic: /realsense_d435_rgb/color/image_raw
+
+    # Robot joint states topic (published by joint_state_broadcaster at 200 Hz).
+    joint_states_topic: /joint_states
+
+    # IMU topic (published by imu_sensor_broadcaster; same topic in sim and real).
+    imu_topic: /imu_sensor_broadcaster/imu

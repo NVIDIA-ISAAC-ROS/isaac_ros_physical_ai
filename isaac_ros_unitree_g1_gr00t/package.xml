@@ -32,24 +32,20 @@ See the License for the specific language governing permissions and
 limitations under the License. -->
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>isaac_ros_unitree_g1_teleop_bringup</name>
+  <name>isaac_ros_unitree_g1_gr00t</name>
   <version>4.5.0</version>
-  <description>High-level teleop launch file for Unitree G1: agile locomotion + bimanual IK + finger control with interactive marker or XR teleop input.</description>
+  <description>High-level launch file for running GR00T (+ AGILE) on the Unitree G1.</description>
   <maintainer email="isaac-ros-maintainers@nvidia.com">Isaac ROS Maintainers</maintainer>
   <license>Apache-2.0</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 
-  <!-- Dependencies -->
   <exec_depend>unitree_g1_bringup</exec_depend>
-  <exec_depend>isaac_ros_cumotion_controllers</exec_depend>
-  <exec_depend>isaac_ros_teleop</exec_depend>
+  <exec_depend>isaac_ros_deploy_converters</exec_depend>
+  <exec_depend>isaac_ros_gr00t_unitree_g1_install</exec_depend>
+  <exec_depend>realsense2_camera</exec_depend>
   <exec_depend>launch</exec_depend>
   <exec_depend>launch_ros</exec_depend>
-  <exec_depend>realsense2_camera</exec_depend>
-
-  <test_depend>ament_cmake_pytest</test_depend>
-  <test_depend>launch_testing_ament_cmake</test_depend>
 
   <export>
     <build_type>ament_cmake</build_type>

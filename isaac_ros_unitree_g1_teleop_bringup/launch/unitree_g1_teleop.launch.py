@@ -2,6 +2,18 @@
 
 # SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 """High-level launch file for G1 agile locomotion + bimanual IK + finger control.
 
@@ -16,7 +28,8 @@ from launch import LaunchContext, LaunchDescription
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, OpaqueFunction
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
-from launch_ros.actions import Node
+from launch_ros.actions import ComposableNodeContainer, Node
+from launch_ros.descriptions import ComposableNode
 
 
 def generate_launch_description() -> LaunchDescription:
@@ -98,49 +111,8 @@ def launch_setup(context: LaunchContext) -> list[Any]:
         }.items(),
     )
 
-    # Static TF publishers bridging ROS convention (x-forward, y-left, z-up) to
-    # OpenXR convention (x-right, y-up, z-backward).
-    _openxr_R_ros = ["-0.5", "0.5", "0.5", "0.5"]  # qx qy qz qw
-    _ros_R_openxr = ["0.5", "-0.5", "-0.5", "0.5"]  # qx qy qz qw
-
-    def _static_tf(
-        parent: str,
-        child: str,
-        translation: list[float | str] | None = None,
-        rotation: list[float | str] | None = None,
-    ) -> Node:
-        if translation is None:
-            translation = [0, 0, 0]
-        if rotation is None:
-            rotation = [0, 0, 0, 1]
-        return Node(
-            package="tf2_ros",
-            executable="static_transform_publisher",
-            name=f"{parent}_to_{child}_tf".replace("/", "_"),
-            arguments=[
-                "--frame-id", parent,
-                "--child-frame-id", child,
-                "--x", str(translation[0]),
-                "--y", str(translation[1]),
-                "--z", str(translation[2]),
-                "--qx", str(rotation[0]),
-                "--qy", str(rotation[1]),
-                "--qz", str(rotation[2]),
-                "--qw", str(rotation[3]),
-            ],
-            output="screen",
-        )
-
     nodes = [
         controller_manager,
-        _static_tf("pelvis", "world_openxr", translation=[0, 0, -1], rotation=_ros_R_openxr),
-        _static_tf("left_wrist_openxr", "left_wrist", rotation=_openxr_R_ros),
-        _static_tf("right_wrist_openxr", "right_wrist", rotation=_openxr_R_ros),
-        # Correction frames: children of the URDF EE frames, oriented in OpenXR
-        # convention.  The IK controller looks up the purely static path
-        # ee_command_frame → ee_frame (e.g. left_hand_palm_link_openxr → left_hand_palm_link).
-        _static_tf("left_hand_palm_link", "left_hand_palm_link_openxr", rotation=_ros_R_openxr),
-        _static_tf("right_hand_palm_link", "right_hand_palm_link_openxr", rotation=_ros_R_openxr),
     ]
 
     if use_markers:
@@ -156,12 +128,42 @@ def launch_setup(context: LaunchContext) -> list[Any]:
             PythonLaunchDescriptionSource(
                 str(teleop_share / "launch/isaac_ros_teleop.launch.py")
             ),
-            # Select frame where teleop app uses for reference poses
             launch_arguments={
-                "world_frame": "world_openxr",
-                "right_wrist_frame": "right_wrist_openxr",
-                "left_wrist_frame": "left_wrist_openxr",
+                "world_frame": "pelvis",
+                "right_wrist_frame": "right_wrist",
+                "left_wrist_frame": "left_wrist",
+                # XR world origin is 1 m below the pelvis frame on the G1.
+                "transform_translation": "[0.0, 0.0, -1.0]",
             }.items(),
         ))
+
+    # RealSense D435 camera driver — only on real hardware.
+    # MuJoCo simulation already publishes its own camera topic.
+    # The driver publishes on /realsense_d435_rgb/color/image_raw,
+    # matching the MuJoCo URDF sensor config so sim and real share one topic.
+    hardware_type = context.launch_configurations.get("hardware_type", "mujoco")
+    if hardware_type == "real":
+        bringup_share_self = Path(
+            get_package_share_directory("isaac_ros_unitree_g1_teleop_bringup")
+        )
+        realsense_config = str(bringup_share_self / "config" / "realsense_d435.yaml")
+        nodes.append(
+            ComposableNodeContainer(
+                package="rclcpp_components",
+                executable="component_container_mt",
+                name="realsense_container",
+                namespace="",
+                composable_node_descriptions=[
+                    ComposableNode(
+                        package="realsense2_camera",
+                        plugin="realsense2_camera::RealSenseNodeFactory",
+                        name="realsense_d435_rgb",
+                        namespace="",
+                        parameters=[realsense_config],
+                    ),
+                ],
+                output="screen",
+            )
+        )
 
     return nodes
