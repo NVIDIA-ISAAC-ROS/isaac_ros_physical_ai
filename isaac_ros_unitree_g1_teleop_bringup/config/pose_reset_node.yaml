@@ -1,0 +1,36 @@
+# SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Reset triggers for pose_reset_node (re-anchors world_teleop->pelvis from the
+# XR end-effector references). Both triggers can run together.
+pose_reset_node:
+  ros__parameters:
+    # --- Pinch trigger (gloves) ---
+    # Bimanual pinch threshold: thumb-tip to little-finger-tip distance (m),
+    # per hand, from the /xr_teleop/hand frames; <= 0 disables.
+    pinch_threshold_m: 0.025
+
+    # --- Button trigger (joysticks) ---
+    # /xr_teleop/controller_data field names, all required together; [] disables.
+    # Default = Y (left controller) + B (right controller).
+    reset_button_combo: ["left_secondary_click", "right_secondary_click"]
+    # Button value >= this counts as pressed.
+    press_threshold: 0.5
+
+    # --- Frame ---
+    # G1 root link the world_teleop frame is anchored to.
+    child_frame_id: pelvis
+    # Child-frame translational offset [x, y, z] (m).
+    child_frame_offset: [-0.25, 0.0, 0.0]

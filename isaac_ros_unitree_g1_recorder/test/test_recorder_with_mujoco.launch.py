@@ -46,7 +46,6 @@ from launch_ros.actions import Node
 import launch_testing
 import launch_testing.actions
 from mujoco_test_helpers import (
-    reset_simulation,
     spin_for,
     wait_for_controllers,
 )
@@ -62,7 +61,7 @@ from std_srvs.srv import Trigger
 #                   facing forward, left fingers open.
 #   Phase 2 (lift): right hand lifts ~25 cm, left hand stays put, left
 #                   fingers close.
-# Poses are expressed in the ``pelvis`` frame used by the IK controller.
+# Poses are in world_teleop (== pelvis via the static identity TF below).
 # Identity orientation sends the palm-link fingers along pelvis -z (down),
 # so we rotate -90° around pelvis +y (pitch) to swing them to pelvis +x
 # (forward).  Both hands share this orientation — the lateral offset (±y)
@@ -256,6 +255,9 @@ def generate_test_description():
     _openxr_R_ros = ('-0.5', '0.5', '0.5', '0.5')
     _ros_R_openxr = ('0.5', '-0.5', '-0.5', '0.5')
     static_tfs = [
+        # world_teleop->pelvis: owned by pose_reset_node in the teleop stack; a static
+        # identity here so world_teleop-framed ee_poses resolve to pelvis.
+        _static_tf('world_teleop', 'pelvis'),
         _static_tf('pelvis', 'world_openxr', tz=-1.0,
                    qx=_ros_R_openxr[0], qy=_ros_R_openxr[1],
                    qz=_ros_R_openxr[2], qw=_ros_R_openxr[3]),
@@ -397,12 +399,12 @@ class TestRecorderWithMuJoCo(unittest.TestCase):
             left_pose = _REST_LEFT_POSE
             finger_key = 'open'
 
-        # IK controller expects poses[0]=right EE, poses[1]=left EE.
+        # ee_poses ordering convention: poses[0]=left, poses[1]=right (per BimanualIkController).
         ee = PoseArray()
         ee.header.stamp = now
-        ee.header.frame_id = 'pelvis'
-        ee.poses.append(right_pose)
+        ee.header.frame_id = 'world_teleop'
         ee.poses.append(left_pose)
+        ee.poses.append(right_pose)
         cls.ee_pub.publish(ee)
 
         fingers = JointState()
@@ -495,7 +497,6 @@ class TestRecorderWithMuJoCo(unittest.TestCase):
         wait_for_controllers(
             self, self.node, self.CONTROLLERS, self.CONTROLLER_STARTUP_WAIT_S
         )
-        reset_simulation(self, self.node, assert_on_failure=False)
         spin_for(
             self.node,
             self.STABILIZATION_WAIT_S,

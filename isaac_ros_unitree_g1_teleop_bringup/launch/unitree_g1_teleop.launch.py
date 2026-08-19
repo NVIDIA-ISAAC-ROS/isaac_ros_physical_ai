@@ -49,8 +49,11 @@ def generate_launch_description() -> LaunchDescription:
         DeclareLaunchArgument(
             "hardware_type",
             default_value="mujoco",
-            description="Hardware type: 'mujoco' for simulation, 'real' for physical G1.",
-            choices=["mujoco", "real"],
+            description=(
+                "Hardware type: 'mujoco' or 'isaacsim' for simulation, "
+                "'real' for physical G1."
+            ),
+            choices=["mujoco", "isaacsim", "real"],
         ),
         DeclareLaunchArgument(
             "enable_viewer",
@@ -97,6 +100,9 @@ def launch_setup(context: LaunchContext) -> list[Any]:
     )
     cmd_vel_topic = "/xr_teleop/root_twist" if use_teleop else ""
 
+    hardware_type = context.launch_configurations.get("hardware_type", "mujoco")
+    use_sim = hardware_type in ("mujoco", "isaacsim")
+
     controller_manager = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(controller_manager_launch),
         launch_arguments={
@@ -108,6 +114,10 @@ def launch_setup(context: LaunchContext) -> list[Any]:
             "use_foxglove": LaunchConfiguration("use_foxglove"),
             "ik_reference_pose_topic": ik_reference_pose_topic,
             "cmd_vel_topic": cmd_vel_topic,
+            # Suppress the static identity world->pelvis during XR teleop; each
+            # hardware path provides the robot-base TF from its own source.
+            "publish_static_world_tf":
+                "false" if not use_markers else "true",
         }.items(),
     )
 
@@ -124,28 +134,50 @@ def launch_setup(context: LaunchContext) -> list[Any]:
         ))
     else:
         teleop_share = Path(get_package_share_directory("isaac_ros_teleop"))
+        bringup_share_self = Path(
+            get_package_share_directory("isaac_ros_unitree_g1_teleop_bringup")
+        )
+        teleop_world_frame = "world_teleop"
+        pose_reset_config = (
+            str(bringup_share_self / "config" / "pose_reset_node.yaml")
+            if hardware_type == "real" else ""
+        )
+        # Sim keeps the world_teleop command frame as an identity child of pelvis,
+        # preserving base-frame IK target semantics without duplicating the
+        # simulator-owned robot-base TF. Real hardware uses pose_reset_node.
         nodes.append(IncludeLaunchDescription(
             PythonLaunchDescriptionSource(
                 str(teleop_share / "launch/isaac_ros_teleop.launch.py")
             ),
             launch_arguments={
-                "world_frame": "pelvis",
+                "world_frame": teleop_world_frame,
                 "right_wrist_frame": "right_wrist",
                 "left_wrist_frame": "left_wrist",
                 # XR world origin is 1 m below the pelvis frame on the G1.
                 "transform_translation": "[0.0, 0.0, -1.0]",
+                "pose_reset_config": pose_reset_config,
+                "use_sim_time": "true" if use_sim else "false",
             }.items(),
         ))
+        if use_sim:
+            nodes.append(Node(
+                package="tf2_ros",
+                executable="static_transform_publisher",
+                name="pelvis_to_world_teleop_tf",
+                arguments=["0", "0", "0", "0", "0", "0", "pelvis", "world_teleop"],
+                output="screen",
+            ))
 
-    # RealSense D435 camera driver — only on real hardware.
-    # MuJoCo simulation already publishes its own camera topic.
-    # The driver publishes on /realsense_d435_rgb/color/image_raw,
-    # matching the MuJoCo URDF sensor config so sim and real share one topic.
-    hardware_type = context.launch_configurations.get("hardware_type", "mujoco")
+    # Real-hardware-only nodes.
     if hardware_type == "real":
         bringup_share_self = Path(
             get_package_share_directory("isaac_ros_unitree_g1_teleop_bringup")
         )
+
+        # RealSense D435 camera driver.
+        # MuJoCo simulation already publishes its own camera topic.
+        # The driver publishes on /realsense_d435_rgb/color/image_raw,
+        # matching the MuJoCo URDF sensor config so sim and real share one topic.
         realsense_config = str(bringup_share_self / "config" / "realsense_d435.yaml")
         nodes.append(
             ComposableNodeContainer(

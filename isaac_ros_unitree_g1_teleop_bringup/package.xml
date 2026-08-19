@@ -33,7 +33,7 @@ limitations under the License. -->
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>isaac_ros_unitree_g1_teleop_bringup</name>
-  <version>4.5.0</version>
+  <version>4.6.0</version>
   <description>High-level teleop launch file for Unitree G1: agile locomotion + bimanual IK + finger control with interactive marker or XR teleop input.</description>
   <maintainer email="isaac-ros-maintainers@nvidia.com">Isaac ROS Maintainers</maintainer>
   <license>Apache-2.0</license>
