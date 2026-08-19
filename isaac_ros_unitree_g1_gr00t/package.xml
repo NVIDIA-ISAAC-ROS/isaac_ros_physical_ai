@@ -33,7 +33,7 @@ limitations under the License. -->
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>isaac_ros_unitree_g1_gr00t</name>
-  <version>4.5.0</version>
+  <version>4.6.0</version>
   <description>High-level launch file for running GR00T (+ AGILE) on the Unitree G1.</description>
   <maintainer email="isaac-ros-maintainers@nvidia.com">Isaac ROS Maintainers</maintainer>
   <license>Apache-2.0</license>
@@ -46,6 +46,8 @@ limitations under the License. -->
   <exec_depend>realsense2_camera</exec_depend>
   <exec_depend>launch</exec_depend>
   <exec_depend>launch_ros</exec_depend>
+
+  <test_depend>ament_cmake_pytest</test_depend>
 
   <export>
     <build_type>ament_cmake</build_type>

@@ -51,6 +51,10 @@ if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
   find_package(launch_testing_ament_cmake REQUIRED)
 
+  set(_test_library_dirs
+    /opt/ros/$ENV{ROS_DISTRO}/opt/sdformat_vendor/lib
+  )
+
   # Discover and register the ament_copyright / ament_flake8 / ament_pep257
   # tests (test/test_copyright.py etc.) as well as any other lint tests
   # whose ament_* packages are declared as test_depends in package.xml.
@@ -58,10 +62,12 @@ if(BUILD_TESTING)
 
   ament_add_pytest_test(test_recorder_state_machine
     test/test_recorder_state_machine.py
+    APPEND_LIBRARY_DIRS ${_test_library_dirs}
     TIMEOUT 60
   )
   ament_add_pytest_test(test_recorder_e2e
     test/test_recorder_e2e.py
+    APPEND_LIBRARY_DIRS ${_test_library_dirs}
     TIMEOUT 120
   )
 
@@ -70,6 +76,7 @@ if(BUILD_TESTING)
   find_package(mujoco_ros2_control QUIET)
   if(mujoco_ros2_control_FOUND)
     add_launch_test(test/test_recorder_with_mujoco.launch.py
+      APPEND_LIBRARY_DIRS ${_test_library_dirs}
       RUNNER "${ament_cmake_ros_DIR}/run_test_isolated.py"
       TIMEOUT 300
     )

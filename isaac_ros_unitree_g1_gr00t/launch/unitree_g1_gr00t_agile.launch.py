@@ -7,13 +7,15 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     http://www.apache.org/licenses/LICENSE-2.0
+# http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
+# SPDX-License-Identifier: Apache-2.0
 
 """Launch file for Unitree G1 running GR00T with (optional) AGILE locomotion.
 
@@ -130,8 +132,8 @@ def generate_launch_description() -> LaunchDescription:
         DeclareLaunchArgument(
             'hardware_type',
             default_value='mujoco',
-            description="Hardware type: 'mujoco' or 'real'.",
-            choices=['mujoco', 'real'],
+            description="Hardware type: 'mujoco', 'isaacsim', or 'real'.",
+            choices=['mujoco', 'real', 'isaacsim'],
         ),
         DeclareLaunchArgument(
             'enable_viewer',
@@ -171,6 +173,30 @@ def generate_launch_description() -> LaunchDescription:
                 "the same directory as the YAML. Empty uses controller_groups "
                 '`config` paths (bundled demo policy unless you customize the group).'
             ),
+        ),
+        DeclareLaunchArgument(
+            'triton_cpu_models',
+            default_value='',
+            description='Comma-separated LEAPP model names to run on Triton CPU.',
+        ),
+        DeclareLaunchArgument(
+            'joint_commands_trajectory_output_topic',
+            default_value='/joint_commands_trajectory',
+            description='Global topic that the inference graph publishes joint command '
+                        'trajectories to.',
+        ),
+        DeclareLaunchArgument(
+            'cmd_vel_output_topic',
+            default_value='/cmd_vel',
+            description='Global topic that the inference graph publishes velocity commands to.',
+        ),
+        DeclareLaunchArgument(
+            'realsense_enable_infra',
+            default_value='false',
+            description='[Real hardware] Enable the RealSense stereo IR streams (infra1/infra2) '
+                        'and disable the IR projector. Needed for cuVSLAM/VGL localization; '
+                        'leave false for the policy-only (color) path. Accepts true/false '
+                        '(case-insensitive).',
         ),
     ]
     return LaunchDescription(
@@ -219,7 +245,11 @@ def launch_setup(context: LaunchContext) -> list[Any]:
             'publish_rate': LaunchConfiguration('publish_rate'),
             'visualize_commands': LaunchConfiguration('visualize_commands'),
             'network_interface': LaunchConfiguration('network_interface'),
-            'inference_config_path': config_path,
+            'inference_graph_config_path': config_path,
+            'triton_cpu_models': LaunchConfiguration('triton_cpu_models'),
+            'joint_commands_trajectory_output_topic': LaunchConfiguration(
+                'joint_commands_trajectory_output_topic'),
+            'cmd_vel_output_topic': LaunchConfiguration('cmd_vel_output_topic'),
         }.items(),
     )
 
@@ -247,21 +277,28 @@ def launch_setup(context: LaunchContext) -> list[Any]:
     # container so images stay in-process with InputBuilder and Triton.
     hardware_type = context.perform_substitution(LaunchConfiguration('hardware_type'))
     if hardware_type == 'real':
+        # Stereo IR is only needed by a downstream consumer (cuVSLAM/VGL
+        # localization). Default off keeps the policy-only path color-only.
+        enable_infra = context.perform_substitution(
+            LaunchConfiguration('realsense_enable_infra')).lower() == 'true'
+        realsense_params = {
+            'enable_color': True,
+            'enable_depth': False,
+            'enable_infra1': enable_infra,
+            'enable_infra2': enable_infra,
+            'enable_gyro': False,
+            'enable_accel': False,
+            'enable_pointcloud': False,
+            'rgb_camera.color_profile': '640x480x30',
+        }
+        if enable_infra:
+            realsense_params['depth_module.emitter_enabled'] = 0
         realsense_camera = ComposableNode(
             package='realsense2_camera',
             plugin='realsense2_camera::RealSenseNodeFactory',
             name='realsense_d435_rgb',
             namespace='',
-            parameters=[{
-                'enable_color': True,
-                'enable_depth': False,
-                'enable_infra1': False,
-                'enable_infra2': False,
-                'enable_gyro': False,
-                'enable_accel': False,
-                'enable_pointcloud': False,
-                'rgb_camera.color_profile': '640x480x30',
-            }],
+            parameters=[realsense_params],
         )
         actions.append(LoadComposableNodes(
             target_container='/inference_graph/inference_pipeline_container',

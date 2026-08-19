@@ -1,0 +1,89 @@
+<?xml version="1.0"?>
+
+<!--
+ SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+ http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+
+ SPDX-License-Identifier: Apache-2.0
+-->
+
+<robot name="oak_cam8">
+  <link name="base_link"/>
+  
+  <!-- Humanoid Base (Pelvis) - coincident with base_link for simplicity -->
+  <link name="pelvis">
+    <inertial>
+      <origin xyz="0 0 -0.07605" rpy="0 0 0"/>
+      <mass value="3.813"/>
+      <inertia ixx="0.010549" ixy="0" ixz="2.1E-06" iyy="0.0093089" iyz="0" izz="0.0079184"/>
+    </inertial>
+  </link>
+  <joint name="base_to_pelvis_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="pelvis"/>
+    <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0"/>
+  </joint>
+  
+  <!-- Torso link (simplified - where camera is mounted) -->
+  <link name="torso_link">
+    <inertial>
+      <origin xyz="0.000931 0.000346 0.15082" rpy="0 0 0"/>
+      <mass value="6.78"/>
+      <inertia ixx="0.05905" ixy="3.3302E-05" ixz="-0.0017715" iyy="0.047014" iyz="-2.2399E-05" izz="0.025652"/>
+    </inertial>
+  </link>
+  <joint name="torso_joint" type="fixed">
+    <parent link="pelvis"/>
+    <child link="torso_link"/>
+    <!-- Approximate position of torso relative to pelvis -->
+    <origin xyz="-0.0039635 0.0 0.044" rpy="0.0 0.0 0.0"/>
+  </joint>
+  
+  <!-- OAK-D Camera mounted on torso/head area -->
+  <link name="oak_cam8_camera_frame"/>
+  <joint name="oak_cam8_camera_joint" type="fixed">
+    <parent link="torso_link"/>
+    <child link="oak_cam8_camera_frame"/>
+    <origin xyz="0.06 0.0 0.40" rpy="0.0 0.0 0.0"/>
+  </joint>
+
+  <!-- RGB Camera -->
+  <link name="oak_cam8_rgb_camera_optical_frame"/>
+  <link name="oak_cam8_left_camera_optical_frame"/>
+  <link name="oak_cam8_right_camera_optical_frame"/>
+  
+  <joint name="oak_cam8_rgb_camera_joint" type="fixed">
+    <parent link="oak_cam8_camera_frame"/>
+    <child link="oak_cam8_rgb_camera_optical_frame"/>
+    <!-- ROS optical frames convention (X right, Y down, Z forward) -->
+    <origin xyz="0.0 0.0 0.0"
+            rpy="1.5707963267948966 -3.141592653589793 1.5707963267948966"/>
+  </joint>
+
+  <!-- Left Camera -->
+  <joint name="oak_cam8_left_camera_joint" type="fixed">
+    <parent link="oak_cam8_rgb_camera_optical_frame"/>
+    <child link="oak_cam8_left_camera_optical_frame"/>
+    <origin xyz="-0.038071 -0.000677 -0.000534"
+            rpy="-0.006259 -0.003902 0.016018"/>
+  </joint>
+
+  <!-- Right Camera -->
+  <joint name="oak_cam8_right_camera_joint" type="fixed">
+    <parent link="oak_cam8_rgb_camera_optical_frame"/>
+    <child link="oak_cam8_right_camera_optical_frame"/>
+    <origin xyz="0.037137 -0.000269 -0.000218"
+            rpy="-0.002780 0.006552 0.013733"/>
+  </joint>
+</robot>
